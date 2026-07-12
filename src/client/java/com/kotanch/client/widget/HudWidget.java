@@ -1,5 +1,6 @@
 package com.kotanch.client.widget;
 
+import com.kotanch.client.config.WidgetConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -44,6 +45,17 @@ public abstract class HudWidget {
             ctx.drawText(mc.textRenderer,line, x + PADDING,ty, 0xFFFFFFFF, true);
             ty += LINE_HEIGHT;
         }
+    }
+
+    public abstract  String typeId();
+
+    protected WidgetConfig config;
+
+    public void attach(WidgetConfig config) {
+        this.config = config;
+    }
+    public WidgetConfig config(){
+        return config;
     }
 
 }

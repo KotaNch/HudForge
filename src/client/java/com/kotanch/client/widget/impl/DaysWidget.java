@@ -13,6 +13,12 @@ public class DaysWidget extends HudWidget {
     public String displayName(){
         return "Days";
     }
+
+    @Override
+    public String typeId(){
+        return "days";
+    }
+
     @Override
     protected List<Text> lines(MinecraftClient mc) {
         if (mc.world == null) return List.of();

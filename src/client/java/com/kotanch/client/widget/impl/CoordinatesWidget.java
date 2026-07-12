@@ -11,6 +11,10 @@ public class CoordinatesWidget extends HudWidget {
     public String displayName(){
         return "Coordinates";
     }
+    @Override
+    public String typeId(){
+        return "coordinates";
+    }
 
     @Override
     protected List<Text> lines(MinecraftClient mc){
@@ -20,7 +24,9 @@ public class CoordinatesWidget extends HudWidget {
         double y = mc.player.getY();
         double z = mc.player.getZ();
 
-        return List.of(Text.literal(String.format("XY%.1f  %.1f  %.1f", x, y, z)));
+        return List.of(Text.literal(String.format("XYZ%.1f  %.1f  %.1f", x, y, z)));
 
     }
+
+
 }

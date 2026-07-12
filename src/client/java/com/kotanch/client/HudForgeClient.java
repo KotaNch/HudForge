@@ -1,5 +1,6 @@
 package com.kotanch.client;
 
+import com.kotanch.client.config.ConfigManager;
 import com.kotanch.client.render.HudRenderer;
 import net.fabricmc.api.ClientModInitializer;
 
@@ -16,6 +17,8 @@ public class HudForgeClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		LOGGER.info("HudForge loaded");
+
+		ConfigManager.load();
 
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
