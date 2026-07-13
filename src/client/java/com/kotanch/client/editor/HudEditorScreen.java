@@ -51,7 +51,14 @@ public class HudEditorScreen extends Screen {
             int ww = w.getWidth(mc);
             int wh = w.getHeight(mc);
 
-            w.renderAt(ctx,x,y,mc);
+            if (w.config().enabled) {
+                w.renderAt(ctx, x, y, mc);
+            }else{
+                ctx.fill(x,y, x +ww, y + wh, 0x33FF5555);
+                ctx.drawText(this.textRenderer,
+                        Text.literal(w.displayName()+ " (off)"),
+                        x + 3, y + 3,0xFFFF9999, true );
+            }
 
             int color = w.config().enabled ? 0x66FFFFFF : 0x66FF5555;
             drawOutline(ctx,x,y,ww,wh,color);
@@ -59,7 +66,7 @@ public class HudEditorScreen extends Screen {
 
         ctx.drawText(
                 this.textRenderer,
-                Text.literal("Drag to move - Shift = no grid - Esc to close"),
+                Text.literal("LMB drag - RMB toggle - Shift = no grid - Esc"),
                 6, this.height - 12, 0xFFFFFFFF, true
         );
     }
@@ -101,6 +108,13 @@ public class HudEditorScreen extends Screen {
         if (hit < 0) {
             selected = -1;
             return super.mouseClicked(click,doubled);
+        }
+
+        if (click.buttonInfo().button() == 1){
+            HudWidget w = widgets.get(hit);
+            w.config().enabled = !w.config().enabled;
+            ConfigManager.save();
+            return true;
         }
         selected = hit;
         dragging = true;
