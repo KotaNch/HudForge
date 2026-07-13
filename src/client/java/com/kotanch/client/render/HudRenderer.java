@@ -35,8 +35,9 @@ public final class HudRenderer {
     }
     public static void render(DrawContext ctx) {
         MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.currentScreen instanceof com.kotanch.client.editor.HudEditorScreen) return;
         if (mc.player == null || mc.world == null) return;
-        if(mc.options.hudHidden) return;
+        if (mc.options.hudHidden) return;
 
         int sw = mc.getWindow().getScaledWidth();
         int sh = mc.getWindow().getScaledHeight();
