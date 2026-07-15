@@ -5,6 +5,7 @@ import com.kotanch.client.config.WidgetConfig;
 import com.kotanch.client.render.Anchor;
 import com.kotanch.client.render.HudRenderer;
 import com.kotanch.client.widget.HudWidget;
+import com.kotanch.client.widget.WidgetRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -30,13 +31,22 @@ public class HudEditorScreen extends Screen {
     private boolean movedWhileDragging = false;
     private  int grabDx, grabDy;
 
+    private boolean paletteOpen = false;
+
+    private static final int ADD_BTN_X = 6;
+    private static final int ADD_BTN_Y = 6;
+    private static final int ADD_BTN_W = 44;
+    private static final int ADD_BTN_H = 14;
+    private static final int PALETTE_ROW_H = 14;
+
+
     public HudEditorScreen() {
         super(Text.literal("HudForge Editor"));
     }
 
     @Override
     protected void init() {
-        widgets = HudRenderer.buildWidgets();
+        rebuild();
     }
 
 
@@ -73,6 +83,7 @@ public class HudEditorScreen extends Screen {
         }
 
         drawPanel(ctx);
+        drawPalette(ctx);
 
         ctx.drawText(
                 this.textRenderer,
@@ -114,6 +125,11 @@ public class HudEditorScreen extends Screen {
     public boolean mouseClicked(Click click, boolean doubled){
         double mx = click.x();
         double my = click.y();
+
+        if (mx >= ADD_BTN_X && mx <= ADD_BTN_X + ADD_BTN_W && my >= ADD_BTN_Y && my <= ADD_BTN_Y + ADD_BTN_H){
+            paletteOpen = !paletteOpen;
+            return true;
+        }
         if (selected >= 0 && !dragging && mx >= this.width - PANEL_W) {
             int[] box = enabledBoxBounds();
             if (mx >= box[0] && mx <= box[0] + 10 && my >= box[1] && my <= box[1] + 10) {
@@ -282,5 +298,30 @@ public class HudEditorScreen extends Screen {
         if (index ==0) c.backgroundOpacity = value;
         else c.textOpacity = value;
         return  true;
+    }
+    private void rebuild(){
+        widgets = HudRenderer.buildWidgets();
+    }
+
+    private void drawPalette(DrawContext ctx) {
+        ctx.fill(ADD_BTN_X, ADD_BTN_Y, ADD_BTN_X + ADD_BTN_W, ADD_BTN_Y + ADD_BTN_H,0xCC202020);
+        drawOutline(ctx, ADD_BTN_X, ADD_BTN_Y, ADD_BTN_W, ADD_BTN_H, 0x88FFFFFF);
+        ctx.drawText(this.textRenderer, Text.literal( "+ Add"), ADD_BTN_X + 6, ADD_BTN_Y + 3,0xFFFFFFFF, true);
+
+        if (!paletteOpen) return;
+
+        List<String[]> types = WidgetRegistry.available();
+        int lx = ADD_BTN_X;
+        int ly = ADD_BTN_Y + ADD_BTN_H + 2;
+        int lw = 110;
+
+        ctx.fill(lx, ly, lx + lw, ly + types.size() * PALETTE_ROW_H, 0xEE181818);
+        drawOutline(ctx,lx, ly,  lw,  types.size() * PALETTE_ROW_H, 0x88FFFFFF);
+
+        for (int i = 0; i < types.size(); i ++){
+            int ry = ly + i * PALETTE_ROW_H;
+            ctx.drawText(this.textRenderer, Text.literal(types.get(i)[1]),lx + 5, ry + 3,0xFFDDDDDD, true);
+        }
+
     }
 }

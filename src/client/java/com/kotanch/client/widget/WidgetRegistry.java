@@ -3,9 +3,13 @@ package com.kotanch.client.widget;
 import com.kotanch.client.config.WidgetConfig;
 import com.kotanch.client.widget.impl.*;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+
+import static com.ibm.icu.text.PluralRules.Operand.w;
 
 public class WidgetRegistry {
     public static final Map<String, Supplier<HudWidget>> FACTORIES = new LinkedHashMap<>();
@@ -36,6 +40,19 @@ public class WidgetRegistry {
 
     public static Map<String, Supplier<HudWidget>> factories(){
         return FACTORIES;
+    }
+
+    public static List<String[]> available(){
+        List<String[]> out = new ArrayList<>();
+        for (String id : FACTORIES.keySet()){
+            WidgetConfig probe = new WidgetConfig();
+            probe.type = id;
+            HudWidget w = create(probe);
+            if (w != null){
+                out.add(new String[]{id, w.displayName()});
+            }
+        }
+        return out;
     }
 }
 

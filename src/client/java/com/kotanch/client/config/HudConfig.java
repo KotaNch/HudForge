@@ -14,6 +14,9 @@ public class HudConfig {
         c.widgets.add(new WidgetConfig("time", Anchor.TOP_LEFT, 4, 48));
         c.widgets.add(new WidgetConfig("coordinates", Anchor.TOP_LEFT,4,4));
         c.widgets.add(new WidgetConfig("days", Anchor.TOP_LEFT,4,26));
+        c.widgets.add(new WidgetConfig("fps", Anchor.TOP_RIGHT, -4, 4));
+        c.widgets.add(new WidgetConfig("direction", Anchor.TOP_RIGHT, -4, 18));
+        c.widgets.add(new WidgetConfig("biome", Anchor.BOTTOM_LEFT, 4, -14));
         return c;
     }
 }
