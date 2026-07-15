@@ -1,9 +1,7 @@
 package com.kotanch.client.widget;
 
 import com.kotanch.client.config.WidgetConfig;
-import com.kotanch.client.widget.impl.CoordinatesWidget;
-import com.kotanch.client.widget.impl.DaysWidget;
-import com.kotanch.client.widget.impl.TimeWidget;
+import com.kotanch.client.widget.impl.*;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,6 +14,10 @@ public class WidgetRegistry {
         register("coordinates", CoordinatesWidget::new);
         register("days", DaysWidget::new);
         register("time", TimeWidget::new);
+        register("fps", FpsWidget::new);
+        register("direction", DirectionWidget::new);
+        register("biome", BiomeWidget::new);
+
     }
 
     private WidgetRegistry() {}
