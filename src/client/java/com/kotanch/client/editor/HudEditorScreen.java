@@ -17,9 +17,12 @@ public class HudEditorScreen extends Screen {
 
     private static final int GRID = 10;
 
+    private static final int PANEL_W = 120;
+
     private List<HudWidget> widgets;
     private int selected = -1;
     private boolean dragging = false;
+    private boolean movedWhileDragging = false;
     private  int grabDx, grabDy;
 
     public HudEditorScreen() {
@@ -64,6 +67,8 @@ public class HudEditorScreen extends Screen {
             drawOutline(ctx,x,y,ww,wh,color);
         }
 
+        drawPanel(ctx);
+
         ctx.drawText(
                 this.textRenderer,
                 Text.literal("LMB drag - RMB toggle - Shift = no grid - Esc"),
@@ -104,6 +109,15 @@ public class HudEditorScreen extends Screen {
     public boolean mouseClicked(Click click, boolean doubled){
         double mx = click.x();
         double my = click.y();
+        if (selected >= 0 && !dragging && mx >= this.width - PANEL_W) {
+            int[] box = enabledBoxBounds();
+            if (mx >= box[0] && mx <= box[0] + 10 && my >= box[1] && my <= box[1] + 10) {
+                HudWidget w = widgets.get(selected);
+                w.config().enabled = !w.config().enabled;
+                ConfigManager.save();
+            }
+            return true;
+        }
         int hit = hitTest(mx,my);
         if (hit < 0) {
             selected = -1;
@@ -118,6 +132,7 @@ public class HudEditorScreen extends Screen {
         }
         selected = hit;
         dragging = true;
+        movedWhileDragging = false;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         int[] p = HudRenderer.resolvePos(widgets.get(hit),mc, this.width, this.height);
@@ -129,6 +144,7 @@ public class HudEditorScreen extends Screen {
     @Override
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
         if (dragging && selected >= 0) {
+            movedWhileDragging = true;
             int nx = (int) click.x() - grabDx;
             int ny = (int) click.y() - grabDy;
             if (!click.hasShift()) {
@@ -149,6 +165,10 @@ public class HudEditorScreen extends Screen {
             placeAbsolute(widgets.get(selected), p[0], p[1], true);
             ConfigManager.save();
             dragging = false;
+
+            if (movedWhileDragging){
+                selected = -1;
+            }
             return  true;
         }
         return super.mouseReleased(click);
@@ -169,5 +189,36 @@ public class HudEditorScreen extends Screen {
     public void close() {
         ConfigManager.save();
         super.close();
+    }
+    private void drawPanel(DrawContext ctx) {
+        if (selected < 0 || dragging) return;
+
+        HudWidget w = widgets.get(selected);
+
+        int px = this.width - PANEL_W;
+        int py = 0;
+        int ph = this.height;
+
+        ctx.fill(px, py, this.width, ph, 0xCC101010);
+        ctx.fill(px, py, px + 1, ph, 0x66FFFFFF);
+
+        ctx.drawText(this.textRenderer, Text.literal(w.displayName()),
+                px + 8, 10, 0xFFFFFFFF, true);
+        ctx.fill(px + 8, 22, this.width -8, 23, 0x44FFFFFF);
+
+        int[] box = enabledBoxBounds();
+        boolean on = w.config().enabled;
+
+        ctx.fill(box[0],box[1], box[0] + 10, box[1] + 10,0xFF000000 );
+        drawOutline(ctx, box[0], box[1], 10,10, 0xFFAAAAAA);
+        if (on) {
+            ctx.fill(box[0] + 2, box[1] + 2, box[0] + 8, box[1] + 8, 0xFF55FF55);
+        }
+        ctx.drawText(this.textRenderer, Text.literal("Enabled"), box[0] + 16, box[1] + 1,0xFFFFFFFF, true);
+    }
+
+    private int[] enabledBoxBounds(){
+        int px = this.width - PANEL_W;
+        return new int[]{px + 8, 32};
     }
 }
