@@ -152,6 +152,11 @@ public class HudEditorScreen extends Screen {
                 ConfigManager.save();
                 return true;
             }
+            int[] del = deleteBtnBounds();
+            if (mx >= del[0] && mx <= del[0] + del[2] && my >= del[1] && my <= del[1] + del[3]){
+                deleteSelected();
+                return true;
+            }
             if (handleSlider(0,mx,my)){
                 draggingSlider = 0;
                 return true;
@@ -271,6 +276,11 @@ public class HudEditorScreen extends Screen {
 
         drawSlider(ctx,0, "Background", w.config().backgroundOpacity);
         drawSlider(ctx,1, "Text", w.config().textOpacity);
+
+        int[] del = deleteBtnBounds();
+        ctx.fill(del[0], del[1], del[0] + del[2], del[1] + del[3],0xCC551515);
+        drawOutline(ctx, del[0],del[1],del[2],del[3],0xFFCC5555 );
+        ctx.drawText(this.textRenderer, Text.literal("Delete"), del[0] + del [2]/2 -15, del[1] + 3, 0xFFFF8888, true);
     }
 
     private int[] enabledBoxBounds(){
@@ -346,5 +356,21 @@ public class HudEditorScreen extends Screen {
 
         paletteOpen = false;
         selected = widgets.size() -1;
+    }
+
+    private int[] deleteBtnBounds(){
+        int px = this.width - PANEL_W;
+        return new int[]{ px +8, this.height -24, PANEL_W-16, 14};
+    }
+
+    private void deleteSelected() {
+        if (selected < 0 || selected >= widgets.size()) return;
+
+        WidgetConfig target = widgets.get(selected).config();
+        ConfigManager.get().widgets.remove(target);
+        ConfigManager.save();
+
+        selected = -1;
+        rebuild();
     }
 }
