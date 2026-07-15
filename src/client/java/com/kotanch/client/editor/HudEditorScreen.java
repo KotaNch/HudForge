@@ -130,6 +130,20 @@ public class HudEditorScreen extends Screen {
             paletteOpen = !paletteOpen;
             return true;
         }
+
+        if (paletteOpen){
+            List<String[]> types = WidgetRegistry.available();
+            int lx = ADD_BTN_X;
+            int ly = ADD_BTN_Y + ADD_BTN_H + 2;
+            int lw = 110;
+            if (mx >= lx && mx <= lx + lw && my >= ly && my <= ly + types.size() * PALETTE_ROW_H){
+                int row = (int) ((my - ly)/ PALETTE_ROW_H);
+                if (row >= 0 && row < types.size()){
+                    addWidget(types.get(row)[0]);
+                }
+                return  true;
+            }
+        }
         if (selected >= 0 && !dragging && mx >= this.width - PANEL_W) {
             int[] box = enabledBoxBounds();
             if (mx >= box[0] && mx <= box[0] + 10 && my >= box[1] && my <= box[1] + 10) {
@@ -323,5 +337,14 @@ public class HudEditorScreen extends Screen {
             ctx.drawText(this.textRenderer, Text.literal(types.get(i)[1]),lx + 5, ry + 3,0xFFDDDDDD, true);
         }
 
+    }
+    private void addWidget(String typeId){
+        WidgetConfig c = new WidgetConfig(typeId, Anchor.CENTER,0,0);
+        ConfigManager.get().widgets.add(c);
+        ConfigManager.save();
+        rebuild();
+
+        paletteOpen = false;
+        selected = widgets.size() -1;
     }
 }
