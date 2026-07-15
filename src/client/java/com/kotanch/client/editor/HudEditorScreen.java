@@ -19,6 +19,11 @@ public class HudEditorScreen extends Screen {
 
     private static final int PANEL_W = 120;
 
+    private static final int SLIDER_W = PANEL_W - 16;
+    private static final int SLIDER_H = 8;
+
+    private int draggingSlider = -1;
+
     private List<HudWidget> widgets;
     private int selected = -1;
     private boolean dragging = false;
@@ -115,6 +120,15 @@ public class HudEditorScreen extends Screen {
                 HudWidget w = widgets.get(selected);
                 w.config().enabled = !w.config().enabled;
                 ConfigManager.save();
+                return true;
+            }
+            if (handleSlider(0,mx,my)){
+                draggingSlider = 0;
+                return true;
+            }
+            if(handleSlider(1,mx,my)){
+                draggingSlider = 1;
+                return true;
             }
             return true;
         }
@@ -143,6 +157,10 @@ public class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+        if (draggingSlider >= 0 && selected >= 0){
+            handleSlider(draggingSlider, click.x(), click.y());
+            return true;
+        }
         if (dragging && selected >= 0) {
             movedWhileDragging = true;
             int nx = (int) click.x() - grabDx;
@@ -159,6 +177,11 @@ public class HudEditorScreen extends Screen {
 
     @Override
     public  boolean mouseReleased(Click click) {
+        if (draggingSlider >= 0){
+            draggingSlider = -1;
+            ConfigManager.save();
+            return true;
+        }
         if (dragging && selected >= 0){
             MinecraftClient mc = MinecraftClient.getInstance();
             int[] p  = HudRenderer.resolvePos(widgets.get(selected), mc, this.width, this.height);
@@ -215,10 +238,49 @@ public class HudEditorScreen extends Screen {
             ctx.fill(box[0] + 2, box[1] + 2, box[0] + 8, box[1] + 8, 0xFF55FF55);
         }
         ctx.drawText(this.textRenderer, Text.literal("Enabled"), box[0] + 16, box[1] + 1,0xFFFFFFFF, true);
+
+        drawSlider(ctx,0, "Background", w.config().backgroundOpacity);
+        drawSlider(ctx,1, "Text", w.config().textOpacity);
     }
 
     private int[] enabledBoxBounds(){
         int px = this.width - PANEL_W;
         return new int[]{px + 8, 32};
+    }
+
+    private int[] sliderBounds(int index) {
+        int px = this.width - PANEL_W;
+        int x = px + 8;
+        int y = 52 + index * 26;
+        return  new int[]{x,y,SLIDER_W, SLIDER_H};
+    }
+
+    private  void drawSlider(DrawContext ctx, int index, String label, int value){
+        int[] b = sliderBounds(index);
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+
+        ctx.drawText(this.textRenderer, Text.literal(label + ": " + value), x,y -10,0xFFFFFFFF, true);
+
+        ctx.fill(x,y, x + w, y + h,0xFF333333);
+
+        int knobX = x + Math.round((value/255f) * (w - 4));
+        ctx.fill(x, y, knobX, y + h, 0xFF5588FF);
+        ctx.fill(knobX, y -1, knobX + 4, y + h + 1, 0xFFFFFFFF);
+    }
+
+    private boolean handleSlider(int index, double mx, double my) {
+        int[] b = sliderBounds(index);
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+
+        if (mx < x || mx > x + w || my < y - 2 || my > y + h + 2) return  false;
+
+        float frac = (float) (mx-x) / (w -4);
+        int value = Math.round(frac * 255f);
+        value = Math.max(0, Math.min(255,value));
+
+        WidgetConfig c = widgets.get(selected).config();
+        if (index ==0) c.backgroundOpacity = value;
+        else c.textOpacity = value;
+        return  true;
     }
 }

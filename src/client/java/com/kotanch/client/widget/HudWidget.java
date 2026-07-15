@@ -39,13 +39,13 @@ public abstract class HudWidget {
         int h = getHeight(mc);
 
         int bgAlpha = config != null ? config.backgroundOpacity : 140;
-        int textAlpha = config != null ? config.backgroundOpacity : 255;
+        int textAlpha = config != null ? config.textOpacity : 255;
 
         ctx.fill(x,y,x + w, y+h, (bgAlpha << 24));
 
         int ty = y + PADDING;
         for (Text line : l){
-            ctx.drawText(mc.textRenderer,line, x + PADDING,ty, (textAlpha << 24) | 0xFFFFFFFF, true);
+            ctx.drawText(mc.textRenderer,line, x + PADDING,ty, (textAlpha << 24) | 0xFFFFFF, true);
             ty += LINE_HEIGHT;
         }
     }
