@@ -1,7 +1,8 @@
 package com.kotanch.client.widget;
 
+import com.kotanch.client.config.WidgetConfig;
+import com.kotanch.client.element.HudLine;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 
@@ -9,41 +10,73 @@ import java.util.List;
 
 public abstract class HudWidget {
     protected  static final int PADDING =3;
-    protected static final int  LINE_HEIGHT = 10;
-    protected static final int GLYPH_HEIGHT = 8;
+    protected static final int LINE_GAP = 2;
+
+    protected WidgetConfig config;
+
 
     public abstract  String displayName();
+    public abstract  String typeId();
 
-    protected  abstract List<Text> lines(MinecraftClient mc);
+    protected  abstract List<HudLine> lines(MinecraftClient mc);
+
+    public void attach(WidgetConfig config) {
+        this.config = config;
+    }
+
+    public WidgetConfig config(){
+        return config;
+    }
 
     public int getWidth(MinecraftClient mc) {
-        TextRenderer tr = mc.textRenderer;
         int max = 0;
-        for (Text line : lines(mc)){
-            max = Math.max(max, tr.getWidth(line));
+        for (HudLine line : lines(mc)){
+            max = Math.max(max, line.width(mc));
         }
-        return max + PADDING * 2;
+        return Math.round((max + PADDING * 2) * scale());
     }
 
     public int getHeight(MinecraftClient mc){
-        int n = lines(mc).size();
-        if (n == 0) return 0;
-        return PADDING * 2 + (n-1) * LINE_HEIGHT + GLYPH_HEIGHT;
+        List<HudLine> l = lines(mc);
+        if (l.isEmpty()) return 0;
+        int h = PADDING * 2;
+        for (int i = 0; i < l.size(); i++){
+            h += l.get(i).height(mc);
+            if (i < l.size() -1) h += LINE_GAP;
+        }
+        return  Math.round(h * scale());
+    }
+
+    protected float scale() {
+        return config != null && config.scale > 0 ? config.scale : 1f;
     }
 
     public void renderAt(DrawContext ctx, int x, int y, MinecraftClient mc){
-        List<Text> l = lines(mc);
+        List<HudLine> l = lines(mc);
         if (l.isEmpty()) return;
+
+        float s = scale();
         int w = getWidth(mc);
         int h = getHeight(mc);
 
-        ctx.fill(x,y,x + w, y+h, 0x90000000);
+        int bgAlpha = config != null ? config.backgroundOpacity : 0;
+        int textAlpha = config != null ? config.textOpacity : 255;
+        int rgb = config != null ? config.textColor : 0xFFFFFF;
 
-        int ty = y + PADDING;
-        for (Text line : l){
-            ctx.drawText(mc.textRenderer,line, x + PADDING,ty, 0xFFFFFFFF, true);
-            ty += LINE_HEIGHT;
+        ctx.fill(x,y,x + w, y+h, (bgAlpha << 24));
+
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x,y);
+        ctx.getMatrices().scale(s,s);
+
+        int ty = PADDING;
+        for (HudLine line : l){
+            line.draw(ctx, PADDING, ty, rgb, textAlpha, mc);
+            ty += line.height(mc) + LINE_GAP;
         }
+
+        ctx.getMatrices().popMatrix();
     }
+
 
 }

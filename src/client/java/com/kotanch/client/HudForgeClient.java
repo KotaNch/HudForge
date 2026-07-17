@@ -1,13 +1,18 @@
 package com.kotanch.client;
 
+import com.kotanch.client.config.ConfigManager;
+import com.kotanch.client.editor.HudEditorScreen;
+import com.kotanch.client.render.HudRenderer;
 import net.fabricmc.api.ClientModInitializer;
 
-import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.util.Identifier;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,23 +20,32 @@ public class HudForgeClient implements ClientModInitializer {
 	public static final String MOD_ID = "hudforge";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+	private static KeyBinding openEditorKey;
+	private  static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(Identifier.of(MOD_ID, "general"));
 	@Override
 	public void onInitializeClient() {
 		LOGGER.info("HudForge loaded");
 
+		ConfigManager.load();
+
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
 				Identifier.of(MOD_ID,"widgets"),
-				(context, tickCounter) -> {
-					MinecraftClient mc = MinecraftClient.getInstance();
-					if (mc.player == null || mc.world == null) return;
-					if (mc.options.hudHidden) return;
-
-					String text = String.format("XYZ %.1f %.1f %.1f",
-							mc.player.getX(), mc.player.getY(), mc.player.getZ());
-
-					context.drawText(mc.textRenderer, Text.literal(text),4,4,0xFFFFFFFF,true);
-				}
+				((context, tickCounter) -> HudRenderer.render(context))
 		);
+		openEditorKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+				"key.hudforge.open_editor",
+				InputUtil.Type.KEYSYM,
+				GLFW.GLFW_KEY_H,
+				CATEGORY
+		));
+
+		ClientTickEvents.END_CLIENT_TICK.register(client ->{
+			while (openEditorKey.wasPressed()){
+				if (client.currentScreen == null) {
+					client.setScreen(new HudEditorScreen());
+				}
+			}
+		});
 	}
 }
