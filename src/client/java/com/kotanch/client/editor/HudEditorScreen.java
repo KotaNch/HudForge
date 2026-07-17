@@ -395,6 +395,9 @@ public class HudEditorScreen extends Screen {
     }
     private void addWidget(String typeId){
         WidgetConfig c = new WidgetConfig(typeId, Anchor.CENTER,0,0);
+        if (typeId.equals("template")){
+            c.template = "{fps} fps";
+        }
         ConfigManager.get().widgets.add(c);
         ConfigManager.save();
         rebuild();
