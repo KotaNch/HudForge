@@ -180,6 +180,9 @@ public class HudEditorScreen extends Screen {
                 draggingSlider = 2;
                 return true;
             }
+            if (templateField != null && templateField.visible && mx >= templateField.getX() && mx <= templateField.getX() + templateField.getWidth() && my >= templateField.getY() && my <= templateField.getY() + templateField.getHeight()) {
+                return super.mouseClicked(click, doubled);
+            }
 
             return true;
         }
@@ -432,6 +435,7 @@ public class HudEditorScreen extends Screen {
         if (templateField != null){
             this.remove(templateField);
             templateField = null;
+            ConfigManager.save();
         }
         if (selected < 0) return;
 
@@ -445,7 +449,11 @@ public class HudEditorScreen extends Screen {
         );
         templateField.setMaxLength(256);
         templateField.setText(w.config().template);
+        templateField.setChangedListener(text -> {
+            if (selected >= 0 && selected < widgets.size()){
+                widgets.get(selected).config().template = text;
+            }
+        });
         this.addDrawableChild(templateField);
-        System.out.println("[HudForge] template field created at y=" + fy);
     }
 }
