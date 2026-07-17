@@ -15,7 +15,7 @@ public class HudConfig {
         hand.template = "{hand_icon} {durability}";
         c.widgets.add(hand);
         WidgetConfig test = new WidgetConfig("template",Anchor.CENTER,10,10);
-        test.template = "Speed {speed}  Chunk {chunk_x} {chunk_z}  Light {light}";
+        test.template = "Time {rl_time}  Walked {walked}";
         c.widgets.add(test);
         WidgetConfig armor = new WidgetConfig("template", Anchor.MIDDLE_RIGHT, -4, 0);
         armor.template =

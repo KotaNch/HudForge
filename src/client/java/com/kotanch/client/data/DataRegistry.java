@@ -10,6 +10,7 @@ import com.kotanch.client.element.TextElement;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
+import net.minecraft.stat.Stats;
 
 public final class DataRegistry {
     private static final Map<String, DataSource> SOURCES = new LinkedHashMap<>();
@@ -60,6 +61,15 @@ public final class DataRegistry {
             return String.valueOf(mc.world.getLightLevel(mc.player.getBlockPos()));
         });
         register("difficulty", mc -> mc.world == null ? "?" : mc.world.getDifficulty().getName());
+        register("rl_time", mc ->{
+            java.time.LocalTime now = java.time.LocalTime.now();
+            return String.format("%02d:%02d", now.getHour(),now.getMinute());
+        });
+        register("walked", mc -> {
+            if(mc.player == null) return  "?";
+            int cm = mc.player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.WALK_ONE_CM));
+            return String.format("%.1f m", cm / 100.0);
+        });
     }
 
     private static String slotDurability(MinecraftClient mc, EquipmentSlot slot) {
