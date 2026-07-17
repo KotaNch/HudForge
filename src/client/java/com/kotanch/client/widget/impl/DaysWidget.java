@@ -1,5 +1,7 @@
 package com.kotanch.client.widget.impl;
 
+import com.kotanch.client.element.HudLine;
+import com.kotanch.client.element.TextElement;
 import com.kotanch.client.widget.HudWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -20,11 +22,11 @@ public class DaysWidget extends HudWidget {
     }
 
     @Override
-    protected List<Text> lines(MinecraftClient mc) {
+    protected List<HudLine> lines(MinecraftClient mc) {
         if (mc.world == null) return List.of();
 
         long day = mc.world.getTimeOfDay()/ TICKS_PER_DAY;
-        return  List.of(Text.literal("Day " + day));
+        return  List.of(new HudLine().add(new TextElement("Day " + day)));
     }
 
 }

@@ -1,5 +1,7 @@
 package com.kotanch.client.widget.impl;
 
+import com.kotanch.client.element.HudLine;
+import com.kotanch.client.element.TextElement;
 import com.kotanch.client.widget.HudWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -21,7 +23,7 @@ public class TimeWidget extends HudWidget {
     }
 
     @Override
-    protected List<Text> lines(MinecraftClient mc){
+    protected List<HudLine> lines(MinecraftClient mc){
         if (mc.world == null) return List.of();
 
     long tod = ((mc.world.getTimeOfDay() % DAY) + DAY) % DAY;
@@ -38,6 +40,6 @@ public class TimeWidget extends HudWidget {
     }else {
         toNight = "night";
     }
-    return  List.of(Text.literal(clock + " " + toNight));
+    return  List.of(new HudLine().add(new TextElement(clock + " " + toNight)));
     }
 }

@@ -1,6 +1,8 @@
 package com.kotanch.client.widget.impl;
 
 import com.kotanch.client.data.DataRegistry;
+import com.kotanch.client.element.HudLine;
+import com.kotanch.client.element.TextElement;
 import com.kotanch.client.widget.HudWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -22,11 +24,11 @@ public class TemplateWidget extends HudWidget {
     }
 
     @Override
-    protected List<Text> lines(MinecraftClient mc){
+    protected List<HudLine> lines(MinecraftClient mc){
         if (config == null || config.template == null || config.template.isEmpty()){
             return  List.of();
         }
         String text = DataRegistry.apply(config.template, mc);
-        return  List.of(Text.literal(text));
+        return  List.of(new HudLine().add(new TextElement(text)));
     }
 }

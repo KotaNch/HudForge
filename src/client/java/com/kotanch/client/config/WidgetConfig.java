@@ -10,6 +10,7 @@ public class WidgetConfig {
     public int offsetX = 4;
     public int offsetY = 4;
 
+    public int textColor = 0xFFFFFF;
     public int backgroundOpacity = 140;
     public int textOpacity = 255;
 

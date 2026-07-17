@@ -1,5 +1,7 @@
 package com.kotanch.client.widget.impl;
 
+import com.kotanch.client.element.HudLine;
+import com.kotanch.client.element.TextElement;
 import com.kotanch.client.widget.HudWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -15,10 +17,10 @@ public class DirectionWidget extends HudWidget {
     @Override public String typeId() {return "direction";}
 
     @Override
-    protected List<Text> lines(MinecraftClient mc) {
+    protected List<HudLine> lines(MinecraftClient mc) {
         if (mc.player == null) return List.of();
         float yaw = MathHelper.wrapDegrees(mc.player.getYaw()) + 180f;
         int i = Math.round(yaw / 45f) & 7;
-        return List.of(Text.literal(NAMES[i] + " (" + AXIS[i] + ")"));
+        return List.of(new HudLine().add(new TextElement(NAMES[i] + " (" + AXIS[i] + ")")));
     }
 }
