@@ -10,8 +10,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
+import java.awt.*;
 import java.util.List;
 
 public class HudEditorScreen extends Screen {
@@ -36,6 +38,7 @@ public class HudEditorScreen extends Screen {
     private  int grabDx, grabDy;
 
     private boolean paletteOpen = false;
+    private TextFieldWidget templateField;
 
     private static final int ADD_BTN_X = 6;
     private static final int ADD_BTN_Y = 6;
@@ -87,6 +90,10 @@ public class HudEditorScreen extends Screen {
         }
 
         drawPanel(ctx);
+        if (templateField != null){
+            templateField.visible = (selected >= 0 && !dragging);
+        }
+        super.render(ctx, mouseX, mouseY, delta);
         drawPalette(ctx);
 
         ctx.drawText(
@@ -179,6 +186,7 @@ public class HudEditorScreen extends Screen {
         int hit = hitTest(mx,my);
         if (hit < 0) {
             selected = -1;
+            syncTemplateField();
             return super.mouseClicked(click,doubled);
         }
 
@@ -191,6 +199,7 @@ public class HudEditorScreen extends Screen {
         selected = hit;
         dragging = true;
         movedWhileDragging = false;
+        syncTemplateField();
 
         MinecraftClient mc = MinecraftClient.getInstance();
         int[] p = HudRenderer.resolvePos(widgets.get(hit),mc, this.width, this.height);
@@ -239,6 +248,7 @@ public class HudEditorScreen extends Screen {
 
             if (movedWhileDragging){
                 selected = -1;
+                syncTemplateField();
             }
             return  true;
         }
@@ -290,6 +300,10 @@ public class HudEditorScreen extends Screen {
         drawSlider(ctx,0, "Background", w.config().backgroundOpacity);
         drawSlider(ctx,1, "Text", w.config().textOpacity);
         drawScaleSlider(ctx, w.config().scale);
+
+        if (w.typeId().equals("template")){
+            ctx.drawText(this.textRenderer, Text.literal("Template:"), px + 8, sliderBounds(2)[1] + 16,0xFFFFFFFF, true);
+        }
 
         int[] del = deleteBtnBounds();
         ctx.fill(del[0], del[1], del[0] + del[2], del[1] + del[3],0xCC551515);
@@ -413,5 +427,25 @@ public class HudEditorScreen extends Screen {
 
         widgets.get(selected).config().scale = value;
         return true;
+    }
+    private void syncTemplateField() {
+        if (templateField != null){
+            this.remove(templateField);
+            templateField = null;
+        }
+        if (selected < 0) return;
+
+        HudWidget w = widgets.get(selected);
+        if (!w.typeId().equals("template")) return;
+
+        int px = this.width - PANEL_W;
+        int fy = sliderBounds(2)[1] + 30;
+        templateField = new TextFieldWidget(
+                this.textRenderer, px + 8, fy, PANEL_W - 16, 14, Text.literal("template")
+        );
+        templateField.setMaxLength(256);
+        templateField.setText(w.config().template);
+        this.addDrawableChild(templateField);
+        System.out.println("[HudForge] template field created at y=" + fy);
     }
 }
