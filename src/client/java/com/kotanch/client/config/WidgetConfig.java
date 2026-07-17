@@ -13,6 +13,7 @@ public class WidgetConfig {
     public int backgroundOpacity = 140;
     public int textOpacity = 255;
 
+    public String template = "";
     public WidgetConfig() {}
 
     public WidgetConfig(String type, Anchor anchor, int offsetX, int offsetY){

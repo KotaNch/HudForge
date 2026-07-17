@@ -21,6 +21,7 @@ public class WidgetRegistry {
         register("fps", FpsWidget::new);
         register("direction", DirectionWidget::new);
         register("biome", BiomeWidget::new);
+        register("template", TemplateWidget::new);
 
     }
 
