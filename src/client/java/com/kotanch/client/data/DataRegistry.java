@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.ItemStack;
 
 public final class DataRegistry {
     private static final Map<String, DataSource> SOURCES = new LinkedHashMap<>();
@@ -14,6 +15,21 @@ public final class DataRegistry {
         register("z", mc -> mc.player == null ? "?" : String.format("%.1f", mc.player.getZ()));
         register("day", mc -> mc.world == null ? "?" : String.valueOf(mc.world.getTimeOfDay()/ 24000L));
         register("fps", mc -> String.valueOf(mc.getCurrentFps()));
+        register("durability", mc -> {
+            if (mc.player == null) return "?";
+            ItemStack stack = mc.player.getMainHandStack();
+            if (stack.isEmpty() || !stack.isDamageable()) return "-";
+            int left = stack.getMaxDamage() - stack.getDamage();
+            return left + "/" + stack.getMaxDamage();
+        });
+        register("durability_percent", mc ->{
+            if (mc.player == null) return "?";
+            ItemStack stack = mc.player.getMainHandStack();
+            if(stack.isEmpty() || !stack.isDamageable()) return "-";
+            int left = stack.getMaxDamage() - stack.getDamage();
+            int pct = Math.round(100f * left / stack.getMaxDamage());
+            return pct + "%";
+        });
     }
 
     private  DataRegistry() {}
