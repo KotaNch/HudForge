@@ -33,7 +33,7 @@ public abstract class HudWidget {
         for (HudLine line : lines(mc)){
             max = Math.max(max, line.width(mc));
         }
-        return max + PADDING * 2;
+        return Math.round((max + PADDING * 2) * scale());
     }
 
     public int getHeight(MinecraftClient mc){
@@ -44,26 +44,38 @@ public abstract class HudWidget {
             h += l.get(i).height(mc);
             if (i < l.size() -1) h += LINE_GAP;
         }
-        return  h;
+        return  Math.round(h * scale());
+    }
+
+    protected float scale() {
+        return config != null && config.scale > 0 ? config.scale : 1f;
     }
 
     public void renderAt(DrawContext ctx, int x, int y, MinecraftClient mc){
         List<HudLine> l = lines(mc);
         if (l.isEmpty()) return;
+
+        float s = scale();
         int w = getWidth(mc);
         int h = getHeight(mc);
 
-        int bgAlpha = config != null ? config.backgroundOpacity : 140;
+        int bgAlpha = config != null ? config.backgroundOpacity : 0;
         int textAlpha = config != null ? config.textOpacity : 255;
         int rgb = config != null ? config.textColor : 0xFFFFFF;
 
         ctx.fill(x,y,x + w, y+h, (bgAlpha << 24));
 
-        int ty = y + PADDING;
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x,y);
+        ctx.getMatrices().scale(s,s);
+
+        int ty = PADDING;
         for (HudLine line : l){
-            line.draw(ctx, x + PADDING, ty, rgb, textAlpha, mc);
+            line.draw(ctx, PADDING, ty, rgb, textAlpha, mc);
             ty += line.height(mc) + LINE_GAP;
         }
+
+        ctx.getMatrices().popMatrix();
     }
 
 

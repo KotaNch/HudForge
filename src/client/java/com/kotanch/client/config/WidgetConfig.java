@@ -11,8 +11,9 @@ public class WidgetConfig {
     public int offsetY = 4;
 
     public int textColor = 0xFFFFFF;
-    public int backgroundOpacity = 140;
+    public int backgroundOpacity = 0;
     public int textOpacity = 255;
+    public float scale = 0.75f;
 
     public String template = "";
     public WidgetConfig() {}

@@ -11,11 +11,9 @@ public class HudConfig {
 
     public static HudConfig defaults() {
         HudConfig c = new HudConfig();
-        WidgetConfig tpl = new WidgetConfig("template", Anchor.CENTER,0,0);
-        WidgetConfig tpl1 = new WidgetConfig("template", Anchor.CENTER, 0, 0);
-        tpl1.template = "Pick: {durability} ({durability_percent})";
-        c.widgets.add(tpl1);
-
+        WidgetConfig hand = new WidgetConfig("template", Anchor.BOTTOM_CENTER,0, -20);
+        hand.template = "{hand_icon} {durability}";
+        c.widgets.add(hand);
         WidgetConfig armor = new WidgetConfig("template", Anchor.MIDDLE_RIGHT, -4, 0);
         armor.template =
                 "{helmet_icon} {helmet}\n" +
@@ -29,7 +27,6 @@ public class HudConfig {
         c.widgets.add(new WidgetConfig("fps", Anchor.TOP_RIGHT, -4, 4));
         c.widgets.add(new WidgetConfig("direction", Anchor.TOP_RIGHT, -4, 18));
         c.widgets.add(new WidgetConfig("biome", Anchor.BOTTOM_LEFT, 4, -14));
-        c.widgets.add(tpl);
         return c;
     }
 }
