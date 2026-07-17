@@ -15,7 +15,7 @@ public class HudConfig {
         hand.template = "{hand_icon} {durability}";
         c.widgets.add(hand);
         WidgetConfig test = new WidgetConfig("template",Anchor.CENTER,10,10);
-        test.template = "HP {health}/{max_health}  Food {hunger}  Lvl {xp_level}";
+        test.template = "Speed {speed}  Chunk {chunk_x} {chunk_z}  Light {light}";
         c.widgets.add(test);
         WidgetConfig armor = new WidgetConfig("template", Anchor.MIDDLE_RIGHT, -4, 0);
         armor.template =

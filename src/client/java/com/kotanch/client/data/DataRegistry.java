@@ -44,6 +44,22 @@ public final class DataRegistry {
         register("hunger", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getHungerManager().getFoodLevel()));
         register("armor_points",mc -> mc.player == null ? "?" : String.valueOf(mc.player.getArmor()));
         register("xp_level", mc -> mc.player == null ? "?" : String.valueOf(mc.player.experienceLevel));
+        register("speed", mc -> {
+            if (mc.player == null) return "?";
+            double dx = mc.player.getX() - mc.player.lastX;
+            double dz = mc.player.getZ() - mc.player.lastZ;
+            double blocksPerSec = Math.sqrt(dx * dx + dz * dz) * 20.0;
+            return String.format("%.1f", blocksPerSec);
+        });
+        register("chunk_x", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockX() >> 4));
+        register("chunk_z", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockZ() >> 4));
+        register("in_chunk_x", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockX() & 15));
+        register("in_chunk_z", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockZ() & 15));
+        register("light", mc -> {
+            if (mc.world == null || mc.player == null) return "?";
+            return String.valueOf(mc.world.getLightLevel(mc.player.getBlockPos()));
+        });
+        register("difficulty", mc -> mc.world == null ? "?" : mc.world.getDifficulty().getName());
     }
 
     private static String slotDurability(MinecraftClient mc, EquipmentSlot slot) {
