@@ -39,6 +39,11 @@ public final class DataRegistry {
         register("chestplate", mc -> slotDurability(mc, EquipmentSlot.CHEST));
         register("leggings", mc -> slotDurability(mc, EquipmentSlot.LEGS));
         register("boots", mc -> slotDurability(mc, EquipmentSlot.FEET));
+        register("health", mc -> mc.player == null ? "?" : String.valueOf(Math.round(mc.player.getHealth())));
+        register("max_health", mc -> mc.player == null ? "?" : String.valueOf(Math.round(mc.player.getMaxHealth())));
+        register("hunger", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getHungerManager().getFoodLevel()));
+        register("armor_points",mc -> mc.player == null ? "?" : String.valueOf(mc.player.getArmor()));
+        register("xp_level", mc -> mc.player == null ? "?" : String.valueOf(mc.player.experienceLevel));
     }
 
     private static String slotDurability(MinecraftClient mc, EquipmentSlot slot) {

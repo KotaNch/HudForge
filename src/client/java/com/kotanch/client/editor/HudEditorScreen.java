@@ -305,7 +305,7 @@ public class HudEditorScreen extends Screen {
     private int[] sliderBounds(int index) {
         int px = this.width - PANEL_W;
         int x = px + 8;
-        int y = 52 + index * 26;
+        int y = 62 + index * 26;
         return  new int[]{x,y,SLIDER_W, SLIDER_H};
     }
 
