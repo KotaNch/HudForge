@@ -23,6 +23,10 @@ public class HudEditorScreen extends Screen {
     private static final int SLIDER_W = PANEL_W - 16;
     private static final int SLIDER_H = 8;
 
+    private static final float SCALE_MIN = 0.5f;
+    private static final float SCALE_MAX = 3.0f;
+
+
     private int draggingSlider = -1;
 
     private List<HudWidget> widgets;
@@ -165,6 +169,11 @@ public class HudEditorScreen extends Screen {
                 draggingSlider = 1;
                 return true;
             }
+            if (handleScaleSlider(mx, my)) {
+                draggingSlider = 2;
+                return true;
+            }
+
             return true;
         }
         int hit = hitTest(mx,my);
@@ -192,8 +201,12 @@ public class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
-        if (draggingSlider >= 0 && selected >= 0){
-            handleSlider(draggingSlider, click.x(), click.y());
+        if (draggingSlider >= 0 && selected >= 0) {
+            if (draggingSlider == 2) {
+                handleScaleSlider(click.x(), click.y());
+            } else {
+                handleSlider(draggingSlider, click.x(), click.y());
+            }
             return true;
         }
         if (dragging && selected >= 0) {
@@ -276,6 +289,7 @@ public class HudEditorScreen extends Screen {
 
         drawSlider(ctx,0, "Background", w.config().backgroundOpacity);
         drawSlider(ctx,1, "Text", w.config().textOpacity);
+        drawScaleSlider(ctx, w.config().scale);
 
         int[] del = deleteBtnBounds();
         ctx.fill(del[0], del[1], del[0] + del[2], del[1] + del[3],0xCC551515);
@@ -307,6 +321,20 @@ public class HudEditorScreen extends Screen {
         ctx.fill(x, y, knobX, y + h, 0xFF5588FF);
         ctx.fill(knobX, y -1, knobX + 4, y + h + 1, 0xFFFFFFFF);
     }
+
+    private  void drawScaleSlider(DrawContext ctx, float value){
+        int[] b = sliderBounds(2);
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+
+        ctx.drawText(this.textRenderer, Text.literal(String.format("Scale: %.2f", value)), x, y - 10, 0xFFFFFFFF, true);
+
+        ctx.fill(x,y,x + w, y + h, 0xFF333333);
+
+        float frac = (value - SCALE_MIN) / (SCALE_MAX - SCALE_MIN);
+        int knobX = x + Math.round(frac * (w -4));
+        ctx.fill(x,y, knobX, y + h, 0xFF5588FF);
+        ctx.fill(knobX, y -1, knobX + 4, y + h + 1, 0xFFFFFFFF);
+     }
 
     private boolean handleSlider(int index, double mx, double my) {
         int[] b = sliderBounds(index);
@@ -372,5 +400,18 @@ public class HudEditorScreen extends Screen {
 
         selected = -1;
         rebuild();
+    }
+
+    private boolean handleScaleSlider(double mx, double my){
+        int[] b = sliderBounds(2);
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+        if (mx < x || mx > x + w || my < y - 2 || my > y + h + 2) return false;
+
+        float frac = (float) (mx - x) / (w - 4);
+        frac = Math.max(0f, Math.min(1f, frac));
+        float value = SCALE_MIN + frac * (SCALE_MAX - SCALE_MIN);
+
+        widgets.get(selected).config().scale = value;
+        return true;
     }
 }
