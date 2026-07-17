@@ -2,8 +2,13 @@ package com.kotanch.client.data;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
+import com.kotanch.client.element.HudLine;
+import com.kotanch.client.element.ItemElement;
+import com.kotanch.client.element.TextElement;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 
 public final class DataRegistry {
@@ -30,6 +35,18 @@ public final class DataRegistry {
             int pct = Math.round(100f * left / stack.getMaxDamage());
             return pct + "%";
         });
+        register("helmet", mc -> slotDurability(mc, EquipmentSlot.HEAD));
+        register("chestplate", mc -> slotDurability(mc, EquipmentSlot.CHEST));
+        register("leggings", mc -> slotDurability(mc, EquipmentSlot.LEGS));
+        register("boots", mc -> slotDurability(mc, EquipmentSlot.FEET));
+    }
+
+    private static String slotDurability(MinecraftClient mc, EquipmentSlot slot) {
+        if (mc.player == null) return  "?";
+        ItemStack stack = mc.player.getEquippedStack(slot);
+        if (stack.isEmpty() || stack.getMaxDamage() <= 0) return "-";
+        int left = stack.getMaxDamage() - stack.getDamage();
+        return left + "/" + stack.getMaxDamage();
     }
 
     private  DataRegistry() {}
@@ -67,5 +84,64 @@ public final class DataRegistry {
             i++;
         }
         return out.toString();
+    }
+
+
+
+    private static final Map<String, Function<MinecraftClient, ItemStack>> ICONS = new LinkedHashMap<>();
+
+    static {
+        registerIcon("helmet_icon", mc -> equipped(mc, EquipmentSlot.HEAD));
+        registerIcon("chestplate_icon", mc -> equipped(mc, EquipmentSlot.CHEST));
+        registerIcon("leggings_icon", mc -> equipped(mc, EquipmentSlot.LEGS));
+        registerIcon("boots_icon", mc -> equipped(mc, EquipmentSlot.FEET));
+        registerIcon("hand_icon",       mc -> mc.player == null ? ItemStack.EMPTY : mc.player.getMainHandStack());
+    }
+
+    public static void registerIcon(String id, Function<MinecraftClient, ItemStack> src){
+        ICONS.put(id,src);
+    }
+
+    private static ItemStack equipped(MinecraftClient mc, EquipmentSlot slot){
+        return  mc.player == null ? ItemStack.EMPTY : mc.player.getEquippedStack(slot);
+    }
+
+    public static HudLine buildLine(String template, MinecraftClient mc){
+        HudLine line = new HudLine();
+        if (template == null || template.isEmpty()) return  line;
+
+        StringBuilder text = new StringBuilder();
+        int i = 0;
+        while (i < template.length()) {
+            char c = template.charAt(i);
+            if (c == '{'){
+                int end = template.indexOf('}', i);
+                if (end > i) {
+                    String id = template.substring(i + 1, end);
+                    if (ICONS.containsKey(id)) {
+                        if (text.length() > 0) {
+                            line.add(new TextElement(text.toString()));
+                            text.setLength(0);
+                        }
+                        ItemStack stack = ICONS.get(id).apply(mc);
+                        line.add(new ItemElement(stack));
+                        i = end + 1;
+                        continue;
+                    } else if (SOURCES.containsKey(id)){
+                        text.append(SOURCES.get(id).get(mc));
+                        i = end + 1;
+                        continue;
+                    } else {
+                        text.append('{').append(id).append('}');
+                        i = end + 1;
+                        continue;
+                    }
+                }
+            }
+            text.append(c);
+            i++;
+        }
+        if (text.length() > 0) line.add(new TextElement(text.toString()));
+        return line;
     }
 }

@@ -12,7 +12,17 @@ public class HudConfig {
     public static HudConfig defaults() {
         HudConfig c = new HudConfig();
         WidgetConfig tpl = new WidgetConfig("template", Anchor.CENTER,0,0);
-        tpl.template = "Pick: {durability} ({durability_percent})";
+        WidgetConfig tpl1 = new WidgetConfig("template", Anchor.CENTER, 0, 0);
+        tpl1.template = "Pick: {durability} ({durability_percent})";
+        c.widgets.add(tpl1);
+
+        WidgetConfig armor = new WidgetConfig("template", Anchor.MIDDLE_RIGHT, -4, 0);
+        armor.template =
+                "{helmet_icon} {helmet}\n" +
+                "{chestplate_icon} {chestplate}\n" +
+                "{leggings_icon} {leggings}\n" +
+                "{boots_icon} {boots}";
+        c.widgets.add(armor);
         c.widgets.add(new WidgetConfig("time", Anchor.TOP_LEFT, 4, 48));
         c.widgets.add(new WidgetConfig("coordinates", Anchor.TOP_LEFT,4,4));
         c.widgets.add(new WidgetConfig("days", Anchor.TOP_LEFT,4,26));

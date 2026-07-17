@@ -28,7 +28,10 @@ public class TemplateWidget extends HudWidget {
         if (config == null || config.template == null || config.template.isEmpty()){
             return  List.of();
         }
-        String text = DataRegistry.apply(config.template, mc);
-        return  List.of(new HudLine().add(new TextElement(text)));
+        List<HudLine> out = new java.util.ArrayList<>();
+        for (String part : config.template.split("\n", -1)){
+            out.add(DataRegistry.buildLine(part,mc));
+        }
+        return  out;
     }
 }
