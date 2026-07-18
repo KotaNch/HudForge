@@ -12,6 +12,9 @@ public abstract class HudWidget {
     protected  static final int PADDING =3;
     protected static final int LINE_GAP = 2;
 
+    protected static final int MIN_WIDTH = 20;
+    protected static final int MIN_HEIGHT = 12;
+
     protected WidgetConfig config;
 
 
@@ -33,18 +36,24 @@ public abstract class HudWidget {
         for (HudLine line : lines(mc)){
             max = Math.max(max, line.width(mc));
         }
-        return Math.round((max + PADDING * 2) * scale());
+        int w =  Math.round((max + PADDING * 2) * scale());
+        return Math.max(w, MIN_WIDTH);
     }
 
-    public int getHeight(MinecraftClient mc){
+    public int getHeight(MinecraftClient mc) {
         List<HudLine> l = lines(mc);
-        if (l.isEmpty()) return 0;
-        int h = PADDING * 2;
-        for (int i = 0; i < l.size(); i++){
-            h += l.get(i).height(mc);
-            if (i < l.size() -1) h += LINE_GAP;
+        int h;
+        if (l.isEmpty()) {
+            h = MIN_HEIGHT;
+        } else {
+            h = PADDING * 2;
+            for (int i = 0; i < l.size(); i++) {
+                h += l.get(i).height(mc);
+                if (i < l.size() - 1) h += LINE_GAP;
+            }
+            h = Math.round(h * scale());
         }
-        return  Math.round(h * scale());
+        return Math.max(h, MIN_HEIGHT);
     }
 
     protected float scale() {

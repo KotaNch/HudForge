@@ -175,4 +175,11 @@ public final class DataRegistry {
         if (text.length() > 0) line.add(new TextElement(text.toString()));
         return line;
     }
+
+    public static java.util.List<String> allPlaceholders() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        out.addAll(SOURCES.keySet());
+        out.addAll(ICONS.keySet());
+        return out;
+    }
 }

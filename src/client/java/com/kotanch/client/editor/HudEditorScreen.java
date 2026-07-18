@@ -94,6 +94,7 @@ public class HudEditorScreen extends Screen {
             templateField.visible = (selected >= 0 && !dragging);
         }
         super.render(ctx, mouseX, mouseY, delta);
+        drawPlaceholders(ctx);
         drawPalette(ctx);
 
         ctx.drawText(
@@ -168,20 +169,31 @@ public class HudEditorScreen extends Screen {
                 deleteSelected();
                 return true;
             }
-            if (handleSlider(0,mx,my)){
-                draggingSlider = 0;
-                return true;
-            }
-            if(handleSlider(1,mx,my)){
-                draggingSlider = 1;
-                return true;
-            }
-            if (handleScaleSlider(mx, my)) {
-                draggingSlider = 2;
-                return true;
-            }
-            if (templateField != null && templateField.visible && mx >= templateField.getX() && mx <= templateField.getX() + templateField.getWidth() && my >= templateField.getY() && my <= templateField.getY() + templateField.getHeight()) {
+            if (handleSlider(0,mx,my)){ draggingSlider = 0; return true; }
+            if (handleSlider(1,mx,my)){ draggingSlider = 1; return true; }
+            if (handleScaleSlider(mx, my)) { draggingSlider = 2; return true; }
+
+            // click on the template field -> focus it
+            if (templateField != null && templateField.visible
+                    && mx >= templateField.getX() && mx <= templateField.getX() + templateField.getWidth()
+                    && my >= templateField.getY() && my <= templateField.getY() + templateField.getHeight()) {
                 return super.mouseClicked(click, doubled);
+            }
+
+            // click on a placeholder -> insert into the field
+            if (templateField != null && templateField.visible) {
+                java.util.List<String> ph = com.kotanch.client.data.DataRegistry.allPlaceholders();
+                int startY = templateField.getY() + 22;
+                int rowH = 11;
+                for (int i = 0; i < ph.size(); i++) {
+                    int ry = startY + i * rowH;
+                    if (ry > this.height - 30) break;
+                    if (my >= ry && my <= ry + rowH && mx >= this.width - PANEL_W + 8) {
+                        templateField.setText(templateField.getText() + "{" + ph.get(i) + "}");
+                        widgets.get(selected).config().template = templateField.getText();
+                        return true;
+                    }
+                }
             }
 
             return true;
@@ -199,6 +211,7 @@ public class HudEditorScreen extends Screen {
             ConfigManager.save();
             return true;
         }
+
         selected = hit;
         dragging = true;
         movedWhileDragging = false;
@@ -458,5 +471,24 @@ public class HudEditorScreen extends Screen {
             }
         });
         this.addDrawableChild(templateField);
+    }
+    private void drawPlaceholders(DrawContext ctx) {
+        if (selected < 0 || dragging) return;
+        if (templateField == null || !templateField.visible) return;
+
+        java.util.List<String> ph = com.kotanch.client.data.DataRegistry.allPlaceholders();
+        int px = this.width - PANEL_W;
+        int startY = templateField.getY() + 22;
+        int rowH = 11;
+
+        ctx.drawText(this.textRenderer, Text.literal("Click to insert:"),
+                px + 8, startY - 11, 0xFFAAAAAA, true);
+
+        for (int i = 0; i < ph.size(); i++) {
+            int ry = startY + i * rowH;
+            if (ry > this.height - 30) break; // don't overflow into Delete button
+            ctx.drawText(this.textRenderer, Text.literal("{" + ph.get(i) + "}"),
+                    px + 8, ry, 0xFF88CCFF, true);
+        }
     }
 }
