@@ -47,6 +47,10 @@ public class HudEditorScreen extends Screen {
     private static final int PALETTE_ROW_H = 14;
 
 
+    private int placeholderScroll = 0;
+
+
+
     public HudEditorScreen() {
         super(Text.literal("HudForge Editor"));
     }
@@ -183,13 +187,15 @@ public class HudEditorScreen extends Screen {
             // click on a placeholder -> insert into the field
             if (templateField != null && templateField.visible) {
                 java.util.List<String> ph = com.kotanch.client.data.DataRegistry.allPlaceholders();
-                int startY = templateField.getY() + 22;
+                int startY = templateField.getY() + 30;
                 int rowH = 11;
-                for (int i = 0; i < ph.size(); i++) {
+                int visibleRows = (this.height - 44 - startY) / rowH;
+                for (int i = 0; i < visibleRows; i++) {
+                    int idx = i + placeholderScroll;
+                    if (idx >= ph.size()) break;
                     int ry = startY + i * rowH;
-                    if (ry > this.height - 30) break;
                     if (my >= ry && my <= ry + rowH && mx >= this.width - PANEL_W + 8) {
-                        templateField.setText(templateField.getText() + "{" + ph.get(i) + "}");
+                        templateField.setText(templateField.getText() + "{" + ph.get(idx) + "}");
                         widgets.get(selected).config().template = templateField.getText();
                         return true;
                     }
@@ -269,6 +275,23 @@ public class HudEditorScreen extends Screen {
             return  true;
         }
         return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double horizontal, double vertical) {
+        if (selected >= 0 && !dragging && mx >= this.width - PANEL_W
+                && templateField != null && templateField.visible) {
+            java.util.List<String> ph = com.kotanch.client.data.DataRegistry.allPlaceholders();
+            int startY = templateField.getY() + 30;
+            int rowH = 11;
+            int visibleRows = (this.height - 44 - startY) / rowH;
+            int maxScroll = Math.max(0, ph.size() - visibleRows);
+
+            placeholderScroll -= (int) Math.signum(vertical); // wheel up = scroll up
+            placeholderScroll = Math.max(0, Math.min(maxScroll, placeholderScroll));
+            return true;
+        }
+        return super.mouseScrolled(mx, my, horizontal, vertical);
     }
 
     private void placeAbsolute(HudWidget w, int ax, int ay, boolean reAnchor){
@@ -407,16 +430,14 @@ public class HudEditorScreen extends Screen {
 
     }
     private void addWidget(String typeId){
-        WidgetConfig c = new WidgetConfig(typeId, Anchor.CENTER,0,0);
-        if (typeId.equals("template")){
-            c.template = "{fps} fps";
-        }
+        WidgetConfig c = new WidgetConfig(typeId, Anchor.CENTER, 0, 0);
         ConfigManager.get().widgets.add(c);
         ConfigManager.save();
         rebuild();
 
         paletteOpen = false;
-        selected = widgets.size() -1;
+        selected = widgets.size() - 1;
+        syncTemplateField();
     }
 
     private int[] deleteBtnBounds(){
@@ -478,17 +499,25 @@ public class HudEditorScreen extends Screen {
 
         java.util.List<String> ph = com.kotanch.client.data.DataRegistry.allPlaceholders();
         int px = this.width - PANEL_W;
-        int startY = templateField.getY() + 22;
+        int startY = templateField.getY() + 30;
         int rowH = 11;
 
         ctx.drawText(this.textRenderer, Text.literal("Click to insert:"),
                 px + 8, startY - 11, 0xFFAAAAAA, true);
 
-        for (int i = 0; i < ph.size(); i++) {
+        int visibleRows = (this.height - 44 - startY) / rowH;
+        for (int i = 0; i < visibleRows; i++) {
+            int idx = i + placeholderScroll;
+            if (idx >= ph.size()) break;
             int ry = startY + i * rowH;
-            if (ry > this.height - 30) break; // don't overflow into Delete button
-            ctx.drawText(this.textRenderer, Text.literal("{" + ph.get(i) + "}"),
+            ctx.drawText(this.textRenderer, Text.literal("{" + ph.get(idx) + "}"),
                     px + 8, ry, 0xFF88CCFF, true);
+        }
+
+        // scroll hint
+        if (ph.size() > visibleRows) {
+            ctx.drawText(this.textRenderer, Text.literal("scroll ↓"),
+                    px + 8, startY + visibleRows * rowH, 0xFF666666, true);
         }
     }
 }
