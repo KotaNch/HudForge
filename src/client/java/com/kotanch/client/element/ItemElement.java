@@ -15,7 +15,7 @@ public class ItemElement implements  HudElement{
     @Override
     public void draw(DrawContext ctx, int x, int y, int textColor, int textAlpha, MinecraftClient mc){
         if (stack == null || stack.isEmpty()) return;
-        ctx.drawItem(stack,x,y -4);
+        ctx.drawItem(stack,x,y);
     }
 
     @Override

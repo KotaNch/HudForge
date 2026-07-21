@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -19,6 +20,8 @@ import org.slf4j.LoggerFactory;
 public class HudForgeClient implements ClientModInitializer {
 	public static final String MOD_ID = "hudforge";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+	private static int statsTimer = 0;
 
 	private static KeyBinding openEditorKey;
 	private  static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(Identifier.of(MOD_ID, "general"));
@@ -45,6 +48,15 @@ public class HudForgeClient implements ClientModInitializer {
 				if (client.currentScreen == null) {
 					client.setScreen(new HudEditorScreen());
 				}
+			}
+			if (client.player != null && client.getNetworkHandler() != null){
+				statsTimer++;
+				if (statsTimer >= 3){
+					statsTimer = 0;
+					client.getNetworkHandler().sendPacket(new ClientStatusC2SPacket(ClientStatusC2SPacket.Mode.REQUEST_STATS));
+				}
+			} else{
+				statsTimer = 0;
 			}
 		});
 	}

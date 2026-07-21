@@ -2,26 +2,42 @@ package com.kotanch.client.editor;
 
 import com.kotanch.client.config.ConfigManager;
 import com.kotanch.client.config.WidgetConfig;
+import com.kotanch.client.data.DataRegistry;
 import com.kotanch.client.render.Anchor;
 import com.kotanch.client.render.HudRenderer;
 import com.kotanch.client.widget.HudWidget;
-import com.kotanch.client.widget.WidgetRegistry;
+import com.kotanch.client.widget.Presets;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class HudEditorScreen extends Screen {
 
     private static final int GRID = 10;
-
     private static final int PANEL_W = 120;
-
     private static final int SLIDER_W = PANEL_W - 16;
     private static final int SLIDER_H = 8;
+
+    private static final float SCALE_MIN = 0.5f;
+    private static final float SCALE_MAX = 3.0f;
+
+    // placeholder list layout (single source of truth)
+    private static final int LIST_TOP_OFFSET = 40;
+    private static final int LIST_BOTTOM = 44;
+    private static final int ROW_H = 11;
+
+    // "+ Add" button
+    private static final int ADD_BTN_Y = 6;
+    private static final int ADD_BTN_W = 44;
+    private static final int ADD_BTN_H = 14;
+    private static final int PALETTE_ROW_H = 14;
+    private static final int PALETTE_W = 110;
 
     private int draggingSlider = -1;
 
@@ -29,16 +45,11 @@ public class HudEditorScreen extends Screen {
     private int selected = -1;
     private boolean dragging = false;
     private boolean movedWhileDragging = false;
-    private  int grabDx, grabDy;
+    private int grabDx, grabDy;
 
     private boolean paletteOpen = false;
-
-    private static final int ADD_BTN_X = 6;
-    private static final int ADD_BTN_Y = 6;
-    private static final int ADD_BTN_W = 44;
-    private static final int ADD_BTN_H = 14;
-    private static final int PALETTE_ROW_H = 14;
-
+    private TextFieldWidget templateField;
+    private int placeholderScroll = 0;
 
     public HudEditorScreen() {
         super(Text.literal("HudForge Editor"));
@@ -49,20 +60,24 @@ public class HudEditorScreen extends Screen {
         rebuild();
     }
 
-
     @Override
     public boolean shouldPause() {
         return false;
     }
 
+    // "+ Add" centered at top so it doesn't overlap corner widgets
+    private int addBtnX() {
+        return this.width / 2 - ADD_BTN_W / 2;
+    }
+
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta){
-        ctx.fill(0,0,this.width,this.height, 0x66000000);
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        ctx.fill(0, 0, this.width, this.height, 0x66000000);
         drawGrid(ctx);
 
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        for (int i = 0; i < widgets.size(); i++){
+        for (int i = 0; i < widgets.size(); i++) {
             HudWidget w = widgets.get(i);
             int[] p = HudRenderer.resolvePos(w, mc, this.width, this.height);
             int x = p[0], y = p[1];
@@ -71,120 +86,166 @@ public class HudEditorScreen extends Screen {
 
             if (w.config().enabled) {
                 w.renderAt(ctx, x, y, mc);
-            }else{
-                ctx.fill(x,y, x +ww, y + wh, 0x33FF5555);
+            } else {
+                ctx.fill(x, y, x + ww, y + wh, 0x33FF5555);
                 ctx.drawText(this.textRenderer,
-                        Text.literal(w.displayName()+ " (off)"),
-                        x + 3, y + 3,0xFFFF9999, true );
+                        Text.literal(w.displayName() + " (off)"),
+                        x + 3, y + 3, 0xFFFF9999, true);
             }
 
-            int color = w.config().enabled ? 0x66FFFFFF : 0x66FF5555;
-            drawOutline(ctx,x,y,ww,wh,color);
+            int color = (i == selected) ? 0xFFFFFFFF
+                    : (w.config().enabled ? 0x66FFFFFF : 0x66FF5555);
+            drawOutline(ctx, x, y, ww, wh, color);
         }
 
         drawPanel(ctx);
+
+        if (templateField != null) {
+            templateField.visible = (selected >= 0 && !dragging);
+        }
+        super.render(ctx, mouseX, mouseY, delta);
+
+        drawPlaceholders(ctx);
         drawPalette(ctx);
 
-        ctx.drawText(
-                this.textRenderer,
+        ctx.drawText(this.textRenderer,
                 Text.literal("LMB drag - RMB toggle - Shift = no grid - Esc"),
-                6, this.height - 12, 0xFFFFFFFF, true
-        );
-    }
-    private void drawGrid(DrawContext ctx) {
-        int col = 0x11FFFFFF;
-        for (int x = 0; x <= this.width; x += GRID){
-            ctx.fill(x,0, x + 1, this.height, col);
-        }
-        for (int y =0; y <= this.height; y += GRID){
-            ctx.fill(0,y, this.width, y + 1, col);
-        }
-    }
-    private  void drawOutline(DrawContext ctx, int x, int y, int w, int h, int color){
-        ctx.fill(x,y,x + w, y + 1, color);
-        ctx.fill(x,y + h -1,x +w, y + h,color);
-        ctx.fill(x,y,x + 1, y + h, color);
-        ctx.fill(x + w -1, y, x + w, y + h, color);
+                6, this.height - 12, 0xFFFFFFFF, true);
     }
 
-    private int hitTest(double mx, double my){
+    private void drawGrid(DrawContext ctx) {
+        int col = 0x11FFFFFF;
+        for (int x = 0; x <= this.width; x += GRID) ctx.fill(x, 0, x + 1, this.height, col);
+        for (int y = 0; y <= this.height; y += GRID) ctx.fill(0, y, this.width, y + 1, col);
+    }
+
+    private void drawOutline(DrawContext ctx, int x, int y, int w, int h, int color) {
+        ctx.fill(x, y, x + w, y + 1, color);
+        ctx.fill(x, y + h - 1, x + w, y + h, color);
+        ctx.fill(x, y, x + 1, y + h, color);
+        ctx.fill(x + w - 1, y, x + w, y + h, color);
+    }
+
+    private int hitTest(double mx, double my) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        for (int i = widgets.size() -1; i >= 0; i--){
+        for (int i = widgets.size() - 1; i >= 0; i--) {
             HudWidget w = widgets.get(i);
-            int[] p = HudRenderer.resolvePos(w,mc, this.width, this.height);
-            int x = p[0];
-            int y = p[1];
-            int ww = w.getWidth(mc);
-            int wh = w.getHeight(mc);
-            if (mx >= x && mx <= x + ww && my >= y && my <= y + wh) return  i;
+            int[] p = HudRenderer.resolvePos(w, mc, this.width, this.height);
+            int x = p[0], y = p[1];
+            int ww = w.getWidth(mc), wh = w.getHeight(mc);
+            if (mx >= x && mx <= x + ww && my >= y && my <= y + wh) return i;
         }
-        return  -1;
+        return -1;
+    }
+
+    // ---- placeholder list geometry (one source of truth) ----
+
+    private int listStartY() {
+        if (templateField == null) return 0;
+        return templateField.getY() + LIST_TOP_OFFSET;
+    }
+
+    private int visibleRows() {
+        return (this.height - LIST_BOTTOM - listStartY()) / ROW_H;
+    }
+
+    private int totalRows() {
+        return DataRegistry.allPlaceholders().size() + 1;
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled){
+    public boolean mouseClicked(Click click, boolean doubled) {
         double mx = click.x();
         double my = click.y();
 
-        if (mx >= ADD_BTN_X && mx <= ADD_BTN_X + ADD_BTN_W && my >= ADD_BTN_Y && my <= ADD_BTN_Y + ADD_BTN_H){
+        // "+ Add" button
+        int bx = addBtnX();
+        if (mx >= bx && mx <= bx + ADD_BTN_W && my >= ADD_BTN_Y && my <= ADD_BTN_Y + ADD_BTN_H) {
             paletteOpen = !paletteOpen;
             return true;
         }
 
-        if (paletteOpen){
-            List<String[]> types = WidgetRegistry.available();
-            int lx = ADD_BTN_X;
+        // palette dropdown (presets)
+        if (paletteOpen) {
+            List<String> names = new ArrayList<>(Presets.ALL.keySet());
+            int lx = bx;
             int ly = ADD_BTN_Y + ADD_BTN_H + 2;
-            int lw = 110;
-            if (mx >= lx && mx <= lx + lw && my >= ly && my <= ly + types.size() * PALETTE_ROW_H){
-                int row = (int) ((my - ly)/ PALETTE_ROW_H);
-                if (row >= 0 && row < types.size()){
-                    addWidget(types.get(row)[0]);
+            if (mx >= lx && mx <= lx + PALETTE_W && my >= ly && my <= ly + names.size() * PALETTE_ROW_H) {
+                int row = (int) ((my - ly) / PALETTE_ROW_H);
+                if (row >= 0 && row < names.size()) {
+                    addTemplateWidget(Presets.ALL.get(names.get(row)));
                 }
-                return  true;
+                return true;
             }
         }
+
+        // panel clicks
         if (selected >= 0 && !dragging && mx >= this.width - PANEL_W) {
             int[] box = enabledBoxBounds();
             if (mx >= box[0] && mx <= box[0] + 10 && my >= box[1] && my <= box[1] + 10) {
-                HudWidget w = widgets.get(selected);
-                w.config().enabled = !w.config().enabled;
+                widgets.get(selected).config().enabled = !widgets.get(selected).config().enabled;
                 ConfigManager.save();
                 return true;
             }
+
             int[] del = deleteBtnBounds();
-            if (mx >= del[0] && mx <= del[0] + del[2] && my >= del[1] && my <= del[1] + del[3]){
+            if (mx >= del[0] && mx <= del[0] + del[2] && my >= del[1] && my <= del[1] + del[3]) {
                 deleteSelected();
                 return true;
             }
-            if (handleSlider(0,mx,my)){
-                draggingSlider = 0;
-                return true;
+
+            if (handleSlider(0, mx, my)) { draggingSlider = 0; return true; }
+            if (handleSlider(1, mx, my)) { draggingSlider = 1; return true; }
+            if (handleScaleSlider(mx, my)) { draggingSlider = 2; return true; }
+
+            // template field focus
+            if (templateField != null && templateField.visible
+                    && mx >= templateField.getX() && mx <= templateField.getX() + templateField.getWidth()
+                    && my >= templateField.getY() && my <= templateField.getY() + templateField.getHeight()) {
+                return super.mouseClicked(click, doubled);
             }
-            if(handleSlider(1,mx,my)){
-                draggingSlider = 1;
-                return true;
+
+            // placeholder / new-line list
+            if (templateField != null && templateField.visible) {
+                List<String> ph = DataRegistry.allPlaceholders();
+                int startY = listStartY();
+                int rows = visibleRows();
+                for (int i = 0; i < rows; i++) {
+                    int idx = i + placeholderScroll;
+                    if (idx >= totalRows()) break;
+                    int ry = startY + i * ROW_H;
+                    if (my >= ry && my <= ry + ROW_H && mx >= this.width - PANEL_W + 8) {
+                        String insert = (idx == 0) ? "|" : "{" + ph.get(idx - 1) + "}";
+                        templateField.setText(templateField.getText() + insert);
+                        widgets.get(selected).config().template = templateField.getText();
+                        return true;
+                    }
+                }
             }
             return true;
         }
-        int hit = hitTest(mx,my);
+
+        // world area clicks
+        int hit = hitTest(mx, my);
         if (hit < 0) {
             selected = -1;
-            return super.mouseClicked(click,doubled);
+            syncTemplateField();
+            return super.mouseClicked(click, doubled);
         }
 
-        if (click.buttonInfo().button() == 1){
-            HudWidget w = widgets.get(hit);
-            w.config().enabled = !w.config().enabled;
+        if (click.buttonInfo().button() == 1) {
+            widgets.get(hit).config().enabled = !widgets.get(hit).config().enabled;
             ConfigManager.save();
             return true;
         }
+
         selected = hit;
         dragging = true;
         movedWhileDragging = false;
+        syncTemplateField();
 
         MinecraftClient mc = MinecraftClient.getInstance();
-        int[] p = HudRenderer.resolvePos(widgets.get(hit),mc, this.width, this.height);
+        int[] p = HudRenderer.resolvePos(widgets.get(hit), mc, this.width, this.height);
         grabDx = (int) mx - p[0];
         grabDy = (int) my - p[1];
         return true;
@@ -192,8 +253,9 @@ public class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
-        if (draggingSlider >= 0 && selected >= 0){
-            handleSlider(draggingSlider, click.x(), click.y());
+        if (draggingSlider >= 0 && selected >= 0) {
+            if (draggingSlider == 2) handleScaleSlider(click.x(), click.y());
+            else handleSlider(draggingSlider, click.x(), click.y());
             return true;
         }
         if (dragging && selected >= 0) {
@@ -211,35 +273,46 @@ public class HudEditorScreen extends Screen {
     }
 
     @Override
-    public  boolean mouseReleased(Click click) {
-        if (draggingSlider >= 0){
+    public boolean mouseReleased(Click click) {
+        if (draggingSlider >= 0) {
             draggingSlider = -1;
             ConfigManager.save();
             return true;
         }
-        if (dragging && selected >= 0){
+        if (dragging && selected >= 0) {
             MinecraftClient mc = MinecraftClient.getInstance();
-            int[] p  = HudRenderer.resolvePos(widgets.get(selected), mc, this.width, this.height);
+            int[] p = HudRenderer.resolvePos(widgets.get(selected), mc, this.width, this.height);
             placeAbsolute(widgets.get(selected), p[0], p[1], true);
             ConfigManager.save();
             dragging = false;
-
-            if (movedWhileDragging){
+            if (movedWhileDragging) {
                 selected = -1;
+                syncTemplateField();
             }
-            return  true;
+            return true;
         }
         return super.mouseReleased(click);
     }
 
-    private void placeAbsolute(HudWidget w, int ax, int ay, boolean reAnchor){
+    @Override
+    public boolean mouseScrolled(double mx, double my, double horizontal, double vertical) {
+        if (selected >= 0 && !dragging && mx >= this.width - PANEL_W
+                && templateField != null && templateField.visible) {
+            int maxScroll = Math.max(0, totalRows() - visibleRows());
+            placeholderScroll -= (int) Math.signum(vertical);
+            placeholderScroll = Math.max(0, Math.min(maxScroll, placeholderScroll));
+            return true;
+        }
+        return super.mouseScrolled(mx, my, horizontal, vertical);
+    }
+
+    private void placeAbsolute(HudWidget w, int ax, int ay, boolean reAnchor) {
         MinecraftClient mc = MinecraftClient.getInstance();
         int ww = w.getWidth(mc), wh = w.getHeight(mc);
         WidgetConfig c = w.config();
-
-        Anchor a = reAnchor ? Anchor.nearest(ax,ay, ww, wh, this.width, this.height) : c.anchor;
+        Anchor a = reAnchor ? Anchor.nearest(ax, ay, ww, wh, this.width, this.height) : c.anchor;
         c.anchor = a;
-        c.offsetX = ax -a.originX(this.width, ww, 0);
+        c.offsetX = ax - a.originX(this.width, ww, 0);
         c.offsetY = ay - a.originY(this.height, wh, 0);
     }
 
@@ -248,129 +321,201 @@ public class HudEditorScreen extends Screen {
         ConfigManager.save();
         super.close();
     }
+
     private void drawPanel(DrawContext ctx) {
         if (selected < 0 || dragging) return;
 
         HudWidget w = widgets.get(selected);
-
         int px = this.width - PANEL_W;
-        int py = 0;
-        int ph = this.height;
 
-        ctx.fill(px, py, this.width, ph, 0xCC101010);
-        ctx.fill(px, py, px + 1, ph, 0x66FFFFFF);
+        ctx.fill(px, 0, this.width, this.height, 0xCC101010);
+        ctx.fill(px, 0, px + 1, this.height, 0x66FFFFFF);
 
-        ctx.drawText(this.textRenderer, Text.literal(w.displayName()),
-                px + 8, 10, 0xFFFFFFFF, true);
-        ctx.fill(px + 8, 22, this.width -8, 23, 0x44FFFFFF);
+        // title, trimmed so long templates don't overflow the panel
+        String shown = this.textRenderer.trimToWidth(w.displayName(), PANEL_W - 16);
+        ctx.drawText(this.textRenderer, Text.literal(shown), px + 8, 10, 0xFFFFFFFF, true);
+        ctx.fill(px + 8, 22, this.width - 8, 23, 0x44FFFFFF);
 
         int[] box = enabledBoxBounds();
-        boolean on = w.config().enabled;
-
-        ctx.fill(box[0],box[1], box[0] + 10, box[1] + 10,0xFF000000 );
-        drawOutline(ctx, box[0], box[1], 10,10, 0xFFAAAAAA);
-        if (on) {
+        ctx.fill(box[0], box[1], box[0] + 10, box[1] + 10, 0xFF000000);
+        drawOutline(ctx, box[0], box[1], 10, 10, 0xFFAAAAAA);
+        if (w.config().enabled) {
             ctx.fill(box[0] + 2, box[1] + 2, box[0] + 8, box[1] + 8, 0xFF55FF55);
         }
-        ctx.drawText(this.textRenderer, Text.literal("Enabled"), box[0] + 16, box[1] + 1,0xFFFFFFFF, true);
+        ctx.drawText(this.textRenderer, Text.literal("Enabled"), box[0] + 16, box[1] + 1, 0xFFFFFFFF, true);
 
-        drawSlider(ctx,0, "Background", w.config().backgroundOpacity);
-        drawSlider(ctx,1, "Text", w.config().textOpacity);
+        drawSlider(ctx, 0, "Background", w.config().backgroundOpacity);
+        drawSlider(ctx, 1, "Text", w.config().textOpacity);
+        drawScaleSlider(ctx, w.config().scale);
+
+        if (w.typeId().equals("template")) {
+            ctx.drawText(this.textRenderer, Text.literal("Template:"),
+                    px + 8, sliderBounds(2)[1] + 16, 0xFFFFFFFF, true);
+        }
 
         int[] del = deleteBtnBounds();
-        ctx.fill(del[0], del[1], del[0] + del[2], del[1] + del[3],0xCC551515);
-        drawOutline(ctx, del[0],del[1],del[2],del[3],0xFFCC5555 );
-        ctx.drawText(this.textRenderer, Text.literal("Delete"), del[0] + del [2]/2 -15, del[1] + 3, 0xFFFF8888, true);
+        ctx.fill(del[0], del[1], del[0] + del[2], del[1] + del[3], 0xCC551515);
+        drawOutline(ctx, del[0], del[1], del[2], del[3], 0xFFCC5555);
+        ctx.drawText(this.textRenderer, Text.literal("Delete"),
+                del[0] + del[2] / 2 - 15, del[1] + 3, 0xFFFF8888, true);
     }
 
-    private int[] enabledBoxBounds(){
+    private int[] enabledBoxBounds() {
         int px = this.width - PANEL_W;
         return new int[]{px + 8, 32};
     }
 
     private int[] sliderBounds(int index) {
         int px = this.width - PANEL_W;
-        int x = px + 8;
-        int y = 52 + index * 26;
-        return  new int[]{x,y,SLIDER_W, SLIDER_H};
+        return new int[]{px + 8, 62 + index * 26, SLIDER_W, SLIDER_H};
     }
 
-    private  void drawSlider(DrawContext ctx, int index, String label, int value){
+    private void drawSlider(DrawContext ctx, int index, String label, int value) {
         int[] b = sliderBounds(index);
         int x = b[0], y = b[1], w = b[2], h = b[3];
-
-        ctx.drawText(this.textRenderer, Text.literal(label + ": " + value), x,y -10,0xFFFFFFFF, true);
-
-        ctx.fill(x,y, x + w, y + h,0xFF333333);
-
-        int knobX = x + Math.round((value/255f) * (w - 4));
+        ctx.drawText(this.textRenderer, Text.literal(label + ": " + value), x, y - 10, 0xFFFFFFFF, true);
+        ctx.fill(x, y, x + w, y + h, 0xFF333333);
+        int knobX = x + Math.round((value / 255f) * (w - 4));
         ctx.fill(x, y, knobX, y + h, 0xFF5588FF);
-        ctx.fill(knobX, y -1, knobX + 4, y + h + 1, 0xFFFFFFFF);
+        ctx.fill(knobX, y - 1, knobX + 4, y + h + 1, 0xFFFFFFFF);
+    }
+
+    private void drawScaleSlider(DrawContext ctx, float value) {
+        int[] b = sliderBounds(2);
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+        ctx.drawText(this.textRenderer, Text.literal(String.format("Scale: %.2f", value)), x, y - 10, 0xFFFFFFFF, true);
+        ctx.fill(x, y, x + w, y + h, 0xFF333333);
+        float frac = (value - SCALE_MIN) / (SCALE_MAX - SCALE_MIN);
+        int knobX = x + Math.round(frac * (w - 4));
+        ctx.fill(x, y, knobX, y + h, 0xFF5588FF);
+        ctx.fill(knobX, y - 1, knobX + 4, y + h + 1, 0xFFFFFFFF);
     }
 
     private boolean handleSlider(int index, double mx, double my) {
         int[] b = sliderBounds(index);
         int x = b[0], y = b[1], w = b[2], h = b[3];
-
-        if (mx < x || mx > x + w || my < y - 2 || my > y + h + 2) return  false;
-
-        float frac = (float) (mx-x) / (w -4);
-        int value = Math.round(frac * 255f);
-        value = Math.max(0, Math.min(255,value));
-
+        if (mx < x || mx > x + w || my < y - 2 || my > y + h + 2) return false;
+        float frac = (float) (mx - x) / (w - 4);
+        int value = Math.max(0, Math.min(255, Math.round(frac * 255f)));
         WidgetConfig c = widgets.get(selected).config();
-        if (index ==0) c.backgroundOpacity = value;
+        if (index == 0) c.backgroundOpacity = value;
         else c.textOpacity = value;
-        return  true;
+        return true;
     }
-    private void rebuild(){
+
+    private boolean handleScaleSlider(double mx, double my) {
+        int[] b = sliderBounds(2);
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+        if (mx < x || mx > x + w || my < y - 2 || my > y + h + 2) return false;
+        float frac = Math.max(0f, Math.min(1f, (float) (mx - x) / (w - 4)));
+        widgets.get(selected).config().scale = SCALE_MIN + frac * (SCALE_MAX - SCALE_MIN);
+        return true;
+    }
+
+    private void rebuild() {
         widgets = HudRenderer.buildWidgets();
     }
 
     private void drawPalette(DrawContext ctx) {
-        ctx.fill(ADD_BTN_X, ADD_BTN_Y, ADD_BTN_X + ADD_BTN_W, ADD_BTN_Y + ADD_BTN_H,0xCC202020);
-        drawOutline(ctx, ADD_BTN_X, ADD_BTN_Y, ADD_BTN_W, ADD_BTN_H, 0x88FFFFFF);
-        ctx.drawText(this.textRenderer, Text.literal( "+ Add"), ADD_BTN_X + 6, ADD_BTN_Y + 3,0xFFFFFFFF, true);
+        int bx = addBtnX();
+        ctx.fill(bx, ADD_BTN_Y, bx + ADD_BTN_W, ADD_BTN_Y + ADD_BTN_H, 0xCC202020);
+        drawOutline(ctx, bx, ADD_BTN_Y, ADD_BTN_W, ADD_BTN_H, 0x88FFFFFF);
+        ctx.drawText(this.textRenderer, Text.literal("+ Add"), bx + 6, ADD_BTN_Y + 3, 0xFFFFFFFF, true);
 
         if (!paletteOpen) return;
 
-        List<String[]> types = WidgetRegistry.available();
-        int lx = ADD_BTN_X;
+        List<String> names = new ArrayList<>(Presets.ALL.keySet());
+        int lx = bx;
         int ly = ADD_BTN_Y + ADD_BTN_H + 2;
-        int lw = 110;
-
-        ctx.fill(lx, ly, lx + lw, ly + types.size() * PALETTE_ROW_H, 0xEE181818);
-        drawOutline(ctx,lx, ly,  lw,  types.size() * PALETTE_ROW_H, 0x88FFFFFF);
-
-        for (int i = 0; i < types.size(); i ++){
-            int ry = ly + i * PALETTE_ROW_H;
-            ctx.drawText(this.textRenderer, Text.literal(types.get(i)[1]),lx + 5, ry + 3,0xFFDDDDDD, true);
+        ctx.fill(lx, ly, lx + PALETTE_W, ly + names.size() * PALETTE_ROW_H, 0xEE181818);
+        drawOutline(ctx, lx, ly, PALETTE_W, names.size() * PALETTE_ROW_H, 0x88FFFFFF);
+        for (int i = 0; i < names.size(); i++) {
+            ctx.drawText(this.textRenderer, Text.literal(names.get(i)),
+                    lx + 5, ly + i * PALETTE_ROW_H + 3, 0xFFDDDDDD, true);
         }
-
     }
-    private void addWidget(String typeId){
-        WidgetConfig c = new WidgetConfig(typeId, Anchor.CENTER,0,0);
+
+    private void addTemplateWidget(String template) {
+        WidgetConfig c = new WidgetConfig("template", Anchor.CENTER, 0, 0);
+        c.template = template;
         ConfigManager.get().widgets.add(c);
         ConfigManager.save();
         rebuild();
-
         paletteOpen = false;
-        selected = widgets.size() -1;
+        selected = widgets.size() - 1;
+        placeholderScroll = 0;
+        syncTemplateField();
     }
 
-    private int[] deleteBtnBounds(){
+    private int[] deleteBtnBounds() {
         int px = this.width - PANEL_W;
-        return new int[]{ px +8, this.height -24, PANEL_W-16, 14};
+        return new int[]{px + 8, this.height - 24, PANEL_W - 16, 14};
     }
 
     private void deleteSelected() {
         if (selected < 0 || selected >= widgets.size()) return;
-
         WidgetConfig target = widgets.get(selected).config();
         ConfigManager.get().widgets.remove(target);
         ConfigManager.save();
-
         selected = -1;
+        syncTemplateField();
         rebuild();
+    }
+
+    private void syncTemplateField() {
+        if (templateField != null) {
+            this.remove(templateField);
+            templateField = null;
+            ConfigManager.save();
+        }
+        if (selected < 0) return;
+
+        HudWidget w = widgets.get(selected);
+        if (!w.typeId().equals("template")) return;
+
+        int px = this.width - PANEL_W;
+        int fy = sliderBounds(2)[1] + 30;
+        templateField = new TextFieldWidget(
+                this.textRenderer, px + 8, fy, PANEL_W - 16, 14, Text.literal("template"));
+        templateField.setMaxLength(256);
+        templateField.setText(w.config().template);
+        templateField.setChangedListener(text -> {
+            if (selected >= 0 && selected < widgets.size()) {
+                widgets.get(selected).config().template = text;
+            }
+        });
+        this.addDrawableChild(templateField);
+        placeholderScroll = 0;
+    }
+
+    private void drawPlaceholders(DrawContext ctx) {
+        if (selected < 0 || dragging) return;
+        if (templateField == null || !templateField.visible) return;
+
+        List<String> ph = DataRegistry.allPlaceholders();
+        int px = this.width - PANEL_W;
+        int startY = listStartY();
+        int rows = visibleRows();
+
+        ctx.drawText(this.textRenderer, Text.literal("Click to insert:"),
+                px + 8, startY - 11, 0xFFAAAAAA, true);
+
+        for (int i = 0; i < rows; i++) {
+            int idx = i + placeholderScroll;
+            if (idx >= totalRows()) break;
+            int ry = startY + i * ROW_H;
+            if (idx == 0) {
+                ctx.drawText(this.textRenderer, Text.literal("| new line"),
+                        px + 8, ry, 0xFFFFCC66, true);
+            } else {
+                ctx.drawText(this.textRenderer, Text.literal("{" + ph.get(idx - 1) + "}"),
+                        px + 8, ry, 0xFF88CCFF, true);
+            }
+        }
+
+        if (totalRows() > rows) {
+            ctx.drawText(this.textRenderer, Text.literal("scroll"),
+                    px + 8, startY + rows * ROW_H, 0xFF666666, true);
+        }
     }
 }

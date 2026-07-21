@@ -29,8 +29,8 @@ public class TemplateWidget extends HudWidget {
             return  List.of();
         }
         List<HudLine> out = new java.util.ArrayList<>();
-        for (String part : config.template.split("\n", -1)){
-            out.add(DataRegistry.buildLine(part,mc));
+        for (String part : config.template.split("\\||\\n", -1)) {
+            out.add(DataRegistry.buildLine(part, mc));
         }
         return  out;
     }

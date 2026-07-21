@@ -3,34 +3,21 @@
 	"id": "hudforge",
 	"version": "${version}",
 	"name": "HudForge",
-	"description": "This is an example description! Tell everyone what your mod is about!",
-	"authors": [
-		"Me!"
-	],
+	"description": "Build your own HUD in-game. Create custom widgets from templates with live data (coordinates, FPS, armor durability, biome, and more), drag them anywhere, and style them — no config files needed. Client-side, works on any server.",
+	"authors": ["KotaNch"],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://modrinth.com/mod/hudforge",
+		"sources": "https://github.com/KotaNch/hudforge",
+		"issues": "https://github.com/KotaNch/hudforge/issues"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/hudforge/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
-		"main": [
-			"com.kotanch.HudForge"
-		],
-		"client": [
-			"com.kotanch.client.HudForgeClient"
-		]
+		"client": ["com.kotanch.client.HudForgeClient"]
 	},
-	"mixins": [
-		"hudforge.mixins.json",
-		{
-			"config": "hudforge.client.mixins.json",
-			"environment": "client"
-		}
-	],
 	"depends": {
-		"fabricloader": ">=0.19.3",
+		"fabricloader": ">=0.16.0",
 		"minecraft": "~1.21.11",
 		"java": ">=21",
 		"fabric-api": "*"

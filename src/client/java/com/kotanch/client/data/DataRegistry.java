@@ -10,6 +10,7 @@ import com.kotanch.client.element.TextElement;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
+import net.minecraft.stat.Stats;
 
 public final class DataRegistry {
     private static final Map<String, DataSource> SOURCES = new LinkedHashMap<>();
@@ -39,6 +40,54 @@ public final class DataRegistry {
         register("chestplate", mc -> slotDurability(mc, EquipmentSlot.CHEST));
         register("leggings", mc -> slotDurability(mc, EquipmentSlot.LEGS));
         register("boots", mc -> slotDurability(mc, EquipmentSlot.FEET));
+        register("health", mc -> mc.player == null ? "?" : String.valueOf(Math.round(mc.player.getHealth())));
+        register("max_health", mc -> mc.player == null ? "?" : String.valueOf(Math.round(mc.player.getMaxHealth())));
+        register("hunger", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getHungerManager().getFoodLevel()));
+        register("armor_points",mc -> mc.player == null ? "?" : String.valueOf(mc.player.getArmor()));
+        register("xp_level", mc -> mc.player == null ? "?" : String.valueOf(mc.player.experienceLevel));
+        register("speed", mc -> {
+            if (mc.player == null) return "?";
+            double dx = mc.player.getX() - mc.player.lastX;
+            double dz = mc.player.getZ() - mc.player.lastZ;
+            double blocksPerSec = Math.sqrt(dx * dx + dz * dz) * 20.0;
+            return String.format("%.1f", blocksPerSec);
+        });
+        register("chunk_x", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockX() >> 4));
+        register("chunk_z", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockZ() >> 4));
+        register("in_chunk_x", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockX() & 15));
+        register("in_chunk_z", mc -> mc.player == null ? "?" : String.valueOf(mc.player.getBlockZ() & 15));
+        register("light", mc -> {
+            if (mc.world == null || mc.player == null) return "?";
+            return String.valueOf(mc.world.getLightLevel(mc.player.getBlockPos()));
+        });
+        register("difficulty", mc -> mc.world == null ? "?" : mc.world.getDifficulty().getName());
+        register("rl_time", mc ->{
+            java.time.LocalTime now = java.time.LocalTime.now();
+            return String.format("%02d:%02d", now.getHour(),now.getMinute());
+        });
+        register("walked", mc -> {
+            if(mc.player == null) return  "?";
+            int cm = mc.player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.WALK_ONE_CM));
+            return String.format("%.1f m", cm / 100.0);
+        });
+        register("biome", mc -> {
+            if (mc.world == null || mc.player == null) return "?";
+            return mc.world.getBiome(mc.player.getBlockPos())
+                    .getKey().map(k -> k.getValue().getPath()).orElse("unknown");
+        });
+        register("direction", mc -> {
+            if (mc.player == null) return "?";
+            String[] names = {"S", "SW", "W", "NW", "N", "NE", "E", "SE"};
+            float yaw = net.minecraft.util.math.MathHelper.wrapDegrees(mc.player.getYaw()) + 180f;
+            return names[Math.round(yaw / 45f) & 7];
+        });
+        register("time", mc -> {
+            if (mc.world == null) return "?";
+            long tod = ((mc.world.getTimeOfDay() % 24000L) + 24000L) % 24000L;
+            long total = (tod * 24 * 60 / 24000L + 6 * 60) % (24 * 60);
+            return String.format("%02d:%02d", total / 60, total % 60);
+        });
+
     }
 
     private static String slotDurability(MinecraftClient mc, EquipmentSlot slot) {
@@ -96,6 +145,7 @@ public final class DataRegistry {
         registerIcon("leggings_icon", mc -> equipped(mc, EquipmentSlot.LEGS));
         registerIcon("boots_icon", mc -> equipped(mc, EquipmentSlot.FEET));
         registerIcon("hand_icon",       mc -> mc.player == null ? ItemStack.EMPTY : mc.player.getMainHandStack());
+
     }
 
     public static void registerIcon(String id, Function<MinecraftClient, ItemStack> src){
@@ -143,5 +193,12 @@ public final class DataRegistry {
         }
         if (text.length() > 0) line.add(new TextElement(text.toString()));
         return line;
+    }
+
+    public static java.util.List<String> allPlaceholders() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        out.addAll(SOURCES.keySet());
+        out.addAll(ICONS.keySet());
+        return out;
     }
 }
