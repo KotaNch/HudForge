@@ -70,6 +70,24 @@ public final class DataRegistry {
             int cm = mc.player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.WALK_ONE_CM));
             return String.format("%.1f m", cm / 100.0);
         });
+        register("biome", mc -> {
+            if (mc.world == null || mc.player == null) return "?";
+            return mc.world.getBiome(mc.player.getBlockPos())
+                    .getKey().map(k -> k.getValue().getPath()).orElse("unknown");
+        });
+        register("direction", mc -> {
+            if (mc.player == null) return "?";
+            String[] names = {"S", "SW", "W", "NW", "N", "NE", "E", "SE"};
+            float yaw = net.minecraft.util.math.MathHelper.wrapDegrees(mc.player.getYaw()) + 180f;
+            return names[Math.round(yaw / 45f) & 7];
+        });
+        register("time", mc -> {
+            if (mc.world == null) return "?";
+            long tod = ((mc.world.getTimeOfDay() % 24000L) + 24000L) % 24000L;
+            long total = (tod * 24 * 60 / 24000L + 6 * 60) % (24 * 60);
+            return String.format("%02d:%02d", total / 60, total % 60);
+        });
+
     }
 
     private static String slotDurability(MinecraftClient mc, EquipmentSlot slot) {
@@ -127,6 +145,7 @@ public final class DataRegistry {
         registerIcon("leggings_icon", mc -> equipped(mc, EquipmentSlot.LEGS));
         registerIcon("boots_icon", mc -> equipped(mc, EquipmentSlot.FEET));
         registerIcon("hand_icon",       mc -> mc.player == null ? ItemStack.EMPTY : mc.player.getMainHandStack());
+
     }
 
     public static void registerIcon(String id, Function<MinecraftClient, ItemStack> src){
